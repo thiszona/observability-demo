@@ -21,8 +21,8 @@ import (
 	"observability-demo/internal/otelinit"
 )
 
-// Handler handles a request and receives a logger already correlated with the
-// request's trace.
+// Handler handles a request. Use log.InfoContext/ErrorContext with r.Context() so
+// the log line is correlated with the request's trace.
 type Handler func(w http.ResponseWriter, r *http.Request, log *slog.Logger)
 
 // Run starts the named service: OpenTelemetry, the chaos middleware, an
@@ -40,7 +40,7 @@ func Run(name string, handle Handler) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handle(w, r, logx.With(r.Context(), logger))
+		handle(w, r, logger)
 	})
 
 	// otelhttp (outer) starts the span, chaos injects and tags it, mux handles.
@@ -72,7 +72,7 @@ func Forward(client *http.Client, next string) Handler {
 			span := trace.SpanFromContext(r.Context())
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-			log.Error("downstream call failed", "url", next, "err", err)
+			log.ErrorContext(r.Context(), "downstream call failed", "url", next, "err", err)
 			http.Error(w, "upstream error", http.StatusBadGateway)
 			return
 		}
@@ -82,7 +82,7 @@ func Forward(client *http.Client, next string) Handler {
 			e := fmt.Errorf("downstream %s returned %d", next, resp.StatusCode)
 			span.RecordError(e)
 			span.SetStatus(codes.Error, e.Error())
-			log.Error("downstream error", "url", next, "status", resp.StatusCode)
+			log.ErrorContext(r.Context(), "downstream error", "url", next, "status", resp.StatusCode)
 			http.Error(w, "downstream failed", http.StatusBadGateway)
 			return
 		}

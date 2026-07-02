@@ -36,6 +36,19 @@ docker compose logs -f otel-collector
 the way up the chain while the rest stay clean. Each service also logs JSON to
 stdout, with the `trace_id` on every line.
 
+## Backends (Part 3)
+
+The base setup prints telemetry to the collector's logs. To send it to a real
+backend instead, only the collector's exporter changes; the services do not.
+
+```sh
+# Grafana LGTM (bundled image, Grafana at http://localhost:3000)
+docker compose -f compose.yaml -f compose.lgtm.yaml up --build
+
+# SigNoz (run SigNoz separately first, then point the demo at it)
+docker compose -f compose.yaml -f compose.signoz.yaml up --build
+```
+
 ## Chaos knobs
 
 Set per service in `compose.yaml`. All default to off.

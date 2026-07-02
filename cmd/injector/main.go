@@ -4,24 +4,23 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"observability-demo/internal/httpx"
+	"observability-demo/internal/logx"
 	"observability-demo/internal/otelinit"
 	"observability-demo/internal/service"
 )
 
 func main() {
 	ctx := context.Background()
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "injector")
+	log := logx.New("injector")
 
 	shutdown, err := otelinit.Init(ctx, "injector")
 	if err != nil {
 		log.Error("otel init failed", "err", err)
-		os.Exit(1)
+		return
 	}
 	defer shutdown(ctx)
 
@@ -37,10 +36,10 @@ func main() {
 		req, _ := http.NewRequestWithContext(ctx, http.MethodPost, gateway, nil)
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Error("request failed", "err", err)
+			log.ErrorContext(ctx, "request failed", "err", err)
 			continue
 		}
 		_ = resp.Body.Close()
-		log.Info("request done", "status", resp.StatusCode)
+		log.InfoContext(ctx, "request done", "status", resp.StatusCode)
 	}
 }

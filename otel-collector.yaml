@@ -1,5 +1,6 @@
-# Part 2 collector: receive traces + metrics over OTLP, print them to stdout.
-# Part 3 swaps the `debug` exporter for a real backend, and only this file changes.
+# Part 2 collector: receive traces, metrics, and logs over OTLP, print to stdout.
+# Part 3 keeps the same receivers and swaps the exporter (see otel-collector.lgtm.yaml
+# and otel-collector.signoz.yaml). Only this file changes; the services do not.
 receivers:
   otlp:
     protocols:
@@ -20,6 +21,10 @@ service:
       processors: [batch]
       exporters: [debug]
     metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
       receivers: [otlp]
       processors: [batch]
       exporters: [debug]

@@ -1,0 +1,12 @@
+# Part 3, SigNoz backend. SigNoz runs as its own stack, so start it separately
+# first (https://signoz.io/docs/install/docker/), which exposes OTLP on the host
+# at :4317. Then point this demo at it:
+#   docker compose -f compose.yaml -f compose.signoz.yaml up --build
+# and open SigNoz at http://localhost:8080.
+services:
+  otel-collector:
+    command: ["--config=/etc/otelcol/signoz.yaml"]
+    volumes:
+      - ./otel-collector.signoz.yaml:/etc/otelcol/signoz.yaml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

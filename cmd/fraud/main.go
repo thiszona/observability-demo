@@ -22,7 +22,7 @@ func main() {
 		defer span.End()
 		span.SetAttributes(attribute.String("user.tier", "standard"))
 
-		log.Info("risk check ok")
+		log.InfoContext(r.Context(), "risk check ok")
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, "ok")
 	})

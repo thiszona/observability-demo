@@ -1,5 +1,6 @@
-// Package otelinit configures OpenTelemetry (traces and metrics over OTLP/HTTP)
-// for a service. The collector endpoint is read from OTEL_EXPORTER_OTLP_ENDPOINT.
+// Package otelinit configures OpenTelemetry (traces, metrics, and logs over
+// OTLP/HTTP) for a service. The collector endpoint is read from
+// OTEL_EXPORTER_OTLP_ENDPOINT.
 package otelinit
 
 import (
@@ -7,18 +8,21 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// Init installs the global tracer provider, meter provider, and text-map
+// Init installs the global tracer, meter, and logger providers plus the text-map
 // propagator for the named service. It returns a shutdown function that flushes
-// and stops both providers; call Init once at startup and defer the result.
+// and stops all three; call Init once at startup and defer the result.
 func Init(ctx context.Context, service string) (func(context.Context) error, error) {
 	res, err := resource.New(ctx, resource.WithAttributes(semconv.ServiceName(service)))
 	if err != nil {
@@ -47,6 +51,16 @@ func Init(ctx context.Context, service string) (func(context.Context) error, err
 	)
 	otel.SetMeterProvider(mp)
 
+	logExp, err := otlploghttp.New(ctx)
+	if err != nil {
+		return nil, err
+	}
+	lp := sdklog.NewLoggerProvider(
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExp)),
+		sdklog.WithResource(res),
+	)
+	global.SetLoggerProvider(lp)
+
 	// Propagate trace context across services via the traceparent header.
 	// Without this, each service starts a new, disconnected trace.
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
@@ -56,6 +70,7 @@ func Init(ctx context.Context, service string) (func(context.Context) error, err
 
 	return func(ctx context.Context) error {
 		_ = tp.Shutdown(ctx)
-		return mp.Shutdown(ctx)
+		_ = mp.Shutdown(ctx)
+		return lp.Shutdown(ctx)
 	}, nil
 }

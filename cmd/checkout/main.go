@@ -42,7 +42,7 @@ func main() {
 
 		if !ok {
 			failures.Add(r.Context(), 1)
-			log.Error("payment failed", "err", err)
+			log.ErrorContext(r.Context(), "payment failed", "err", err)
 			http.Error(w, "checkout failed", http.StatusBadGateway)
 			return
 		}

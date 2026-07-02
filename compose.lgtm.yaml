@@ -1,0 +1,15 @@
+# Part 3, Grafana LGTM backend. Run alongside the base file:
+#   docker compose -f compose.yaml -f compose.lgtm.yaml up --build
+# Then open Grafana at http://localhost:3000 (anonymous, no login).
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000" # Grafana UI
+
+  otel-collector:
+    command: ["--config=/etc/otelcol/lgtm.yaml"]
+    volumes:
+      - ./otel-collector.lgtm.yaml:/etc/otelcol/lgtm.yaml:ro
+    depends_on:
+      - lgtm
