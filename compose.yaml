@@ -1,0 +1,51 @@
+# Runs with either `docker compose up --build` or `podman compose up --build`.
+# All five services share one image; each runs a different binary.
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+
+  gateway:
+    build: .
+    command: ["/app/gateway"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      CHECKOUT_URL: "http://checkout:8080"
+    depends_on: [otel-collector, checkout]
+
+  checkout:
+    build: .
+    command: ["/app/checkout"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      PAYMENT_URL: "http://payment:8080"
+    depends_on: [otel-collector, payment]
+
+  payment:
+    build: .
+    command: ["/app/payment"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      FRAUD_URL: "http://fraud:8080"
+      # centerpiece: 20% of payments fail. set to 0 for a calm baseline.
+      CHAOS_ERROR_RATE: "0.2"
+    depends_on: [otel-collector, fraud]
+
+  fraud:
+    build: .
+    command: ["/app/fraud"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      # try CHAOS_LATENCY: "300ms" to make the fraud span fat in the waterfall
+    depends_on: [otel-collector]
+
+  injector:
+    build: .
+    command: ["/app/injector"]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      GATEWAY_URL: "http://gateway:8080"
+      INJECT_INTERVAL: "500ms"
+    depends_on: [gateway]
