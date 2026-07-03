@@ -1,0 +1,14 @@
+# Part 4, tail-based sampling into Grafana LGTM:
+#   docker compose -f compose.yaml -f compose.sampling-tail.yaml up --build
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000"
+
+  otel-collector:
+    command: ["--config=/etc/otelcol/sampling-tail.yaml"]
+    volumes:
+      - ./otel-collector.sampling-tail.yaml:/etc/otelcol/sampling-tail.yaml:ro
+    depends_on:
+      - lgtm

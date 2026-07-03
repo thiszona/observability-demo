@@ -1,0 +1,14 @@
+# Part 4, head-based sampling into Grafana LGTM:
+#   docker compose -f compose.yaml -f compose.sampling-head.yaml up --build
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000"
+
+  otel-collector:
+    command: ["--config=/etc/otelcol/sampling-head.yaml"]
+    volumes:
+      - ./otel-collector.sampling-head.yaml:/etc/otelcol/sampling-head.yaml:ro
+    depends_on:
+      - lgtm
