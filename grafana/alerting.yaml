@@ -1,0 +1,44 @@
+# Part 5: a provisioned Grafana alert rule for the checkout error-budget fast burn.
+# Mounted into the grafana/otel-lgtm container by compose.lgtm.yaml. It queries the
+# burn rate against a 99.9% SLO (allowed error fraction 0.001) and pages when it
+# crosses the 14.4 fast-burn threshold. With CHAOS_ERROR_RATE=0.2 the burn rate is
+# ~200, so this fires within a couple of minutes.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: slo-burn-rate
+    folder: SLO
+    interval: 1m
+    rules:
+      - uid: checkout-fast-burn
+        title: CheckoutErrorBudgetFastBurn
+        condition: C
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: checkout error budget is burning fast
+        noDataState: OK
+        execErrState: Alerting
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              editorMode: code
+              expr: (sum(rate(checkout_failures_total[5m])) / sum(rate(checkout_requests_total[5m]))) / 0.001
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [14.4]

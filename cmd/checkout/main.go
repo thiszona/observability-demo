@@ -24,10 +24,12 @@ func main() {
 	// a counter for a tally (failures).
 	meter := otel.Meter("checkout")
 	duration, _ := meter.Float64Histogram("checkout.duration", metric.WithUnit("ms"))
+	requests, _ := meter.Int64Counter("checkout.requests")
 	failures, _ := meter.Int64Counter("checkout.failures")
 
 	service.Run("checkout", func(w http.ResponseWriter, r *http.Request, log *slog.Logger) {
 		start := time.Now()
+		requests.Add(r.Context(), 1)
 
 		req, _ := http.NewRequestWithContext(r.Context(), http.MethodPost, payment, nil)
 		resp, err := client.Do(req)

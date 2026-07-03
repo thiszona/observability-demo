@@ -6,6 +6,9 @@ services:
     image: grafana/otel-lgtm:latest
     ports:
       - "3000:3000" # Grafana UI
+    volumes:
+      # Part 5: provision the burn-rate alert rule into Grafana on startup.
+      - ./grafana/alerting.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/alerting.yaml:ro
 
   otel-collector:
     command: ["--config=/etc/otelcol/lgtm.yaml"]
